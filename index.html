@@ -1,1 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PlayUnblocked</title>
 
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+
+    h1 { margin-top: 20px; }
+
+    #search {
+      padding: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: none;
+      margin: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 200px);
+      gap: 20px;
+      padding: 20px;
+      justify-content: center;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    img {
+      width: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+      height: 120px;
+    }
+
+    .fav {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    #gameContainer {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      z-index: 999;
+    }
+
+    #gameBar {
+      background: #1e293b;
+      padding: 10px;
+    }
+
+    button {
+      background: #334155;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100% - 50px);
+      border: none;
+    }
+
+    .section-title {
+      margin-top: 30px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  
+<div id="BackupWebsite" style="background:#facc15; color:#0f172a; padding:10px; font-weight:bold; position:relative;">
+  ⚠️ This site might get blocked! Use the <a href="https://free-things.vercel.app/" target="_blank" style="color:#0f172a; text-decoration:underline;">backup link</a>.
+  <span onclick="document.getElementById('backupBanner').style.display='none'" 
+        style="position:absolute; right:10px; cursor:pointer; font-weight:bold;">✖</span>
+</div>
+  
+<h1>PlayUnblocked</h1>
+
+<input id="search" placeholder="Search games...">
+
+<div class="section-title">⭐ Favorites</div>
+<div class="grid" id="favorites"></div>
+
+<div class="section-title">🧠 Recently Played</div>
+<div class="grid" id="recent"></div>
+
+<div class="section-title">🎮 All Games</div>
+<div class="grid" id="games"></div>
+
+<!-- GAME PLAYER -->
+<div id="gameContainer">
+  <div id="gameBar">
+    <button onclick="goFullScreen()">Fullscreen</button>
+    <button onclick="openBlank()">Open in New Tab</button>
+    <button onclick="closeGame()">Close</button>
+  </div>
+  <iframe id="gameFrame"></iframe>
+</div>
+
+<script>
+// Game list with images
+const gameList = [
+  { name: "Gorilla Tag", file: "Gorilla Tag.html", img: "https://image2url.com/r2/default/images/1774997576158-87d07070-a20a-4848-854b-19e028e1cb4d.png" },
+  { name: "SoundBoard", file: "Soundboard.html", img: "https://image2url.com/r2/default/images/1774997631238-4a94c4a3-288c-4883-9906-e826b0c8289e.png" },
+  { name: "BasketBros", file: "Basket Bros.html", img: "https://image2url.com/r2/default/images/1774997596360-3c14b6d8-24a1-4d6a-b2e8-af861411d348.png" },
+  { name: "Five Nights At Epstein's", file: "Five Nights at Epstein's.html", img: "https://image2url.com/r2/default/images/1774997501040-6b54e707-3295-424f-8967-dd9f8a10d379.png" }
+];
+
+let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+let recent = JSON.parse(localStorage.getItem("recent")) || [];
+
+// Render all games
+function renderGames() {
+  const container = document.getElementById("games");
+  container.innerHTML = "";
+
+  gameList.forEach(game => {
+    let card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <div class="fav" onclick="toggleFavorite(event, '${game.name}')">
+        ${favorites.includes(game.name) ? "⭐" : "☆"}
+      </div>
+      <img src="${game.img}" alt="${game.name}">
+      <p>${game.name}</p>
+    `;
+
+    card.onclick = () => openGame(game.file, game.name);
+    container.appendChild(card);
+  });
+}
+
+// Toggle favorite
+function toggleFavorite(e, name) {
+  e.stopPropagation();
+  if (favorites.includes(name)) favorites = favorites.filter(f => f !== name);
+  else favorites.push(name);
+
+  localStorage.setItem("favorites", JSON.stringify(favorites));
+  renderFavorites();
+  renderGames();
+}
+
+// Render favorites
+function renderFavorites() {
+  const container = document.getElementById("favorites");
+  container.innerHTML = "";
+
+  gameList.forEach(game => {
+    if (favorites.includes(game.name)) {
+      let card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${game.img}" alt="${game.name}">
+        <p>${game.name}</p>
+      `;
+      card.onclick = () => openGame(game.file, game.name);
+      container.appendChild(card);
+    }
+  });
+}
+
+// Render recently played
+function renderRecent() {
+  const container = document.getElementById("recent");
+  container.innerHTML = "";
+
+  recent.forEach(name => {
+    let game = gameList.find(g => g.name === name);
+    if (!game) return;
+
+    let card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <img src="${game.img}" alt="${game.name}">
+      <p>${game.name}</p>
+    `;
+    card.onclick = () => openGame(game.file, game.name);
+    container.appendChild(card);
+  });
+}
+
+// Open game
+function openGame(url, name) {
+  document.getElementById("gameContainer").style.display = "block";
+  document.getElementById("gameFrame").src = url;
+
+  recent = [name, ...recent.filter(r => r !== name)].slice(0, 5);
+  localStorage.setItem("recent", JSON.stringify(recent));
+  renderRecent();
+}
+
+// Close game
+function closeGame() {
+  document.getElementById("gameContainer").style.display = "none";
+  document.getElementById("gameFrame").src = "";
+}
+
+// Fullscreen
+function goFullScreen() {
+  let frame = document.getElementById("gameFrame");
+  if (frame.requestFullscreen) frame.requestFullscreen();
+  else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+  else if (frame.msRequestFullscreen) frame.msRequestFullscreen();
+}
+
+// Open in new tab
+function openBlank() {
+  let url = document.getElementById("gameFrame").src;
+  let win = window.open("about:blank", "_blank");
+  if (!win) {
+    alert("Popup blocked! Allow popups for this site.");
+    return;
+  }
+  win.document.write(`
+    <iframe src="${url}" style="margin:0; padding:0; width:100%; height:100%; border:none;"></iframe>
+  `);
+}
+
+// Search
+document.getElementById("search").addEventListener("input", function() {
+  let value = this.value.toLowerCase();
+  document.querySelectorAll("#games .card").forEach(card => {
+    card.style.display = card.innerText.toLowerCase().includes(value) ? "block" : "none";
+  });
+});
+
+// Init
+renderGames();
+renderFavorites();
+renderRecent();
+</script>
+
+</body>
+</html>
